@@ -31,8 +31,7 @@ type keymap struct {
 	stop  key.Binding
 	reset key.Binding
 	quit  key.Binding
-	newTimer key.Binding
-	newTask key.Binding
+	enter key.Binding
 }
 
 func (m model) Init() tea.Cmd {
@@ -64,25 +63,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case tea.KeyMsg:
-		switch{
-		//start timer
-		case key.Matches(msg, m.keymap.newTimer): 
-			m.timer = timer.NewWithInterval(timeout, time.Millisecond)
-			m.started = true
-			cmd:= m.timer.Start()
-			return m, cmd
-		case key.Matches(msg, m.keymap.quit):
-			m.quitting = true
-			return m, tea.Quit
-		case key.Matches(msg, m.keymap.reset):
-			m.timer.Timeout = timeout
-		case key.Matches(msg, m.keymap.start, m.keymap.stop):
-			return m, m.timer.Toggle()
-		case key.Matches(msg, m.keymap.newTask): 
-			m.viewport.SetContent(m.textarea.Value())
-			m.textarea.Reset()
-			
-		}
+		switch m.started{
+		case true: 
+			switch{
+			//start timer
+			case key.Matches(msg, m.keymap.quit):
+				m.quitting = true
+				return m, tea.Quit
+			case key.Matches(msg, m.keymap.reset):
+				m.timer.Timeout = timeout
+			case key.Matches(msg, m.keymap.start, m.keymap.stop):
+				return m, m.timer.Toggle()
+			}
+		case false:
+			switch{
+				case key.Matches(msg, m.keymap.enter): 
+					m.viewport.SetContent(m.textarea.Value())
+					m.textarea.Reset()
+					m.timer = timer.NewWithInterval(timeout, time.Millisecond)
+					m.started = true
+					//cmd:= m.timer.Start()
+					return m, tea.Batch(tiCmd, vpCmd)
+	
+
+			}
+	}
 	}
 
 	return m, tea.Batch(tiCmd, vpCmd)
@@ -94,8 +99,7 @@ func (m model) helpView() string {
 		m.keymap.stop,
 		m.keymap.reset,
 		m.keymap.quit,
-		m.keymap.newTimer,
-		m.keymap.newTask,
+		m.keymap.enter,
 	})
 }
 
@@ -159,14 +163,10 @@ func main() {
 				key.WithKeys("q", "ctrl+c"),
 				key.WithHelp("q", "quit"),
 			),
-			newTimer: key.NewBinding(
-				key.WithKeys("n"),
-				key.WithHelp("n", "new"),
-
-			),
-			newTask: key.NewBinding(
-				key.WithKeys("a"),
-				key.WithHelp("a", "add new task"),
+			
+			enter:key.NewBinding(
+				key.WithKeys("enter"),
+				key.WithHelp("enter", "Add new task"),
 
 			),
 
