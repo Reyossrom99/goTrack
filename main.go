@@ -15,6 +15,7 @@ import (
 
 const timeout = time.Second * 5
 const gap = "\n\n"
+
 type model struct {
 	timer    timer.Model
 	keymap   keymap
@@ -83,7 +84,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.timer = timer.NewWithInterval(timeout, time.Millisecond)
 					m.started = true
 					//cmd:= m.timer.Start()
-					return m, tea.Batch(tiCmd, vpCmd)
+					//m.keymap.start.SetEnabled(true)
+					//m.keymap.stop.SetEnabled(false)
+					var cmd tea.Cmd
+					m.timer, cmd = m.timer.Update(msg)
+					m.keymap.stop.SetEnabled(m.timer.Running())
+					m.keymap.start.SetEnabled(!m.timer.Running())
+					return m, tea.Batch(tiCmd, vpCmd, cmd)
 	
 
 			}
@@ -175,7 +182,7 @@ func main() {
 		viewport: vp,
 		textarea: ta,
 	}
-	m.keymap.start.SetEnabled(false)
+	m.keymap.start.SetEnabled(true)
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Uh oh, we encountered an error:", err)
